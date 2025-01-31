@@ -17,7 +17,9 @@ data = {
 }
 
 doc_ref = db.collection('home').document('test1')
-doc_ref.set(data)
+doc = doc_ref.get()
 
-
-print("Data added to Firestore, Document ID: ", doc_ref.id)
+if doc.exists:
+    print("Data added to Firestore, Document ID: ", doc.to_dict())
+else:
+    print("No such document")
