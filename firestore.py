@@ -16,10 +16,15 @@ data = {
     'desc': 'This is a test description'
 }
 
-doc_ref = db.collection('home').document('test1')
-doc = doc_ref.get()
+doc_ref = db.collection('home')
+docs = doc_ref.stream()
 
-if doc.exists:
-    print("Data added to Firestore, Document ID: ", doc.to_dict())
-else:
-    print("No such document")
+for doc in docs:
+    print("Document ID: ", doc.id)
+
+doc_id = input("Enter the document ID: ")
+
+doc = doc_ref.document(doc_id)
+
+d = doc.get().to_dict()
+print(d)
