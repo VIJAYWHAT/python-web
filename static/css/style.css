@@ -249,7 +249,6 @@ body {
     cursor: not-allowed;
 }
 
-/* Forum specific styles */
 .user-list h3 {
     padding: 10px 15px;
     margin: 0;
@@ -277,7 +276,6 @@ body {
     flex: 1;
 }
 
-/* Active state for forums */
 .contact.active {
     background-color: #27ae60;
 }
