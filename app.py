@@ -145,7 +145,7 @@ def send_message():
         'sender_id': sender_id,
         'recipient_id': recipient_id,
         'message': message,
-        'timestamp': firebase.database.ServerValue.TIMESTAMP,
+        'timestamp': firestore.SERVER_TIMESTAMP,
         'read': False
     }
     
