@@ -3,7 +3,6 @@ import firebase_admin
 from firebase_admin import credentials, auth, firestore
 from pyrebase import pyrebase
 import os
-import time
 from dotenv import load_dotenv
 
 
@@ -100,10 +99,7 @@ def chat():
                 'email': user_data.get('email', '')
             })
     
-    return render_template('chat.html', 
-                         user=session['user'], 
-                         users=users,
-                         firebase_config=firebase_config)  # Add this line
+    return render_template('chat.html', user=session['user'], users=users)
 
 @app.route('/get_messages/<recipient_id>')
 def get_messages(recipient_id):
@@ -145,7 +141,7 @@ def send_message():
         'sender_id': sender_id,
         'recipient_id': recipient_id,
         'message': message,
-        'timestamp': int(time.time() * 1000),
+        'timestamp': firebase.database.ServerValue.TIMESTAMP,
         'read': False
     }
     
