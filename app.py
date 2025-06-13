@@ -99,7 +99,10 @@ def chat():
                 'email': user_data.get('email', '')
             })
     
-    return render_template('chat.html', user=session['user'], users=users)
+    return render_template('chat.html', 
+                         user=session['user'], 
+                         users=users,
+                         firebase_config=firebase_config)  # Add this line
 
 @app.route('/get_messages/<recipient_id>')
 def get_messages(recipient_id):
