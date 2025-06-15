@@ -83,40 +83,54 @@ def chat():
     if 'user' not in session:
         return redirect(url_for('login'))
 
-    current_user_doc = db.collection('users').document(session['user']['id']).get()
+    current_user_id = session['user']['id']
+    current_user_doc = db.collection('users').document(current_user_id).get()
     current_user_data = current_user_doc.to_dict()
 
-    user_learning_languages = current_user_data.get('learn_languages', [])
-    user_id = session['user']['id']
+    user_learning_languages = set(current_user_data.get('learn_languages', []))
+    user_tutor_languages = set(current_user_data.get('tutor', []))
 
     users = []
-    users_ref = db.collection('users').stream()
+    added_user_ids = set()
 
-    for doc in users_ref:
-        if doc.id == user_id:
-            continue  # skip current user
+    all_users = db.collection('users').stream()
+
+    for doc in all_users:
+        user_id = doc.id
+        if user_id == current_user_id:
+            continue
 
         user_data = doc.to_dict()
-        tutor_languages = user_data.get('tutor', [])
+        name = user_data.get('name', user_id)
 
-        # Find common languages
-        common_langs = list(set(user_learning_languages) & set(tutor_languages))
+        # Case 1: Current user is a student (has learn_languages)
+        other_tutor_languages = set(user_data.get('tutor', []))
+        matched_as_student = user_learning_languages & other_tutor_languages
 
-        if common_langs:
-            # Build description like "English Tutor" or "English and Hindi Tutor"
-            if len(common_langs) == 1:
-                description = f"{common_langs[0].capitalize()} Tutor"
-            else:
-                capitalized = [lang.capitalize() for lang in common_langs]
-                description = f"{' and '.join(capitalized)} Tutor"
-
+        if matched_as_student and user_id not in added_user_ids:
+            description = format_language_description(matched_as_student, role="Tutor")
             users.append({
-                'id': doc.id,
-                'name': user_data.get('name', doc.id),
+                'id': user_id,
+                'name': name,
                 'description': description
             })
+            added_user_ids.add(user_id)
+            continue  # If matched already, don't double check below
 
-    # Get forums the user is part of
+        # Case 2: Current user is a tutor (has tutor)
+        other_learn_languages = set(user_data.get('learn_languages', []))
+        matched_as_tutor = user_tutor_languages & other_learn_languages
+
+        if matched_as_tutor and user_id not in added_user_ids:
+            description = format_language_description(matched_as_tutor, role="Student")
+            users.append({
+                'id': user_id,
+                'name': name,
+                'description': description
+            })
+            added_user_ids.add(user_id)
+
+    # Forums user is part of
     forums = []
     for lang in user_learning_languages:
         forum_doc = db.collection('forums').document(lang).get()
@@ -134,6 +148,14 @@ def chat():
                            users=users,
                            forums=forums,
                            firebase_config=firebase_config)
+
+
+def format_language_description(languages, role):
+    langs = [lang.capitalize() for lang in languages]
+    if len(langs) == 1:
+        return f"{langs[0]} {role}"
+    else:
+        return f"{' and '.join(langs)} {role}"
 
 
 @app.route('/get_messages/<recipient_id>')
