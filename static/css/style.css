@@ -165,6 +165,11 @@ body {
 .chat-header h2 {
     margin: 0;
     font-size: 18px;
+     display: inline;
+}
+ 
+.desc {
+    display: inline;
 }
 
 .messages {

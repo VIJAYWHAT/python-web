@@ -52,7 +52,7 @@
     
     <div class="chat-area">
       <div class="chat-header">
-        <h2 id="current-chat-user">Select a contact or forum</h2>
+        <h2 id="current-chat-user">Select a contact or forum</h2> <h4 class="desc"> - </h4>
       </div>
       <div class="messages" id="messages-container"></div>
       <div class="message-input">
@@ -68,9 +68,10 @@
     let currentChat = null;
     let currentChatRef = null;
 
-    function startChatWith(chatId, name, type) {
+    function startChatWith(chatId, name, description, type) {
       // UI updates
       document.getElementById('current-chat-user').textContent = name;
+       document.querySelector('h4.desc').textContent = description;
       document.getElementById('message-input').disabled = false;
       document.getElementById('send-button').disabled = false;
       
@@ -138,7 +139,9 @@
       contact.addEventListener('click', function() {
         const userId = this.getAttribute('data-userid');
         const userName = this.querySelector('.contact-name').textContent;
-        startChatWith(userId, userName, 'user');
+        const description = this.querySelector('.contact-email').textContent;
+
+        startChatWith(userId, userName, description, 'user');
       });
     });
 
@@ -146,7 +149,8 @@
       contact.addEventListener('click', function() {
         const forumId = this.getAttribute('data-forumid');
         const forumName = this.querySelector('.contact-name').textContent;
-        startChatWith(forumId, forumName, 'forum');
+        const description = this.querySelector('.contact-email').textContent;
+        startChatWith(forumId, forumName, description, 'forum');
       });
     });
 
