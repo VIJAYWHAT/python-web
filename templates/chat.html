@@ -52,7 +52,7 @@
     
     <div class="chat-area">
       <div class="chat-header">
-        <h2 id="current-chat-user">Select a contact or forum</h2> <h4 class="desc"> - </h4>
+        <h2 id="current-chat-user">Select a contact or forum</h2> <h4 class="desc"></h4>
       </div>
       <div class="messages" id="messages-container"></div>
       <div class="message-input">
@@ -71,7 +71,7 @@
     function startChatWith(chatId, name, description, type) {
       // UI updates
       document.getElementById('current-chat-user').textContent = name;
-       document.querySelector('h4.desc').textContent = description;
+      document.querySelector('h4.desc').textContent = ` - ${description}`;
       document.getElementById('message-input').disabled = false;
       document.getElementById('send-button').disabled = false;
       
