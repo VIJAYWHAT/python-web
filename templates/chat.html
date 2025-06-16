@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat - {{ user.name }}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script>
+        // Initialize Firebase with your config
+        const firebaseConfig = {
+            apiKey: "{{ firebase_config.apiKey }}",
+            authDomain: "{{ firebase_config.authDomain }}",
+            databaseURL: "{{ firebase_config.databaseURL }}",
+            projectId: "{{ firebase_config.projectId }}",
+            storageBucket: "{{ firebase_config.storageBucket }}",
+            messagingSenderId: "{{ firebase_config.messagingSenderId }}",
+            appId: "{{ firebase_config.appId }}"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+    </script>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="sidebar">
+            <div class="user-header">
+                <h2>{{ user.name }}</h2>
+                <a href="/logout" class="logout-button">Logout</a>
+            </div>
+            <div class="user-list">
+                <h3>Contacts</h3>
+                <ul>
+                    {% for contact in users %}
+                    <li class="contact" data-userid="{{ contact.id }}">
+                        <span class="contact-name">{{ contact.name }}</span>
+                        <span class="contact-email">{{ contact.email }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        <div class="chat-area">
+            <div class="chat-header">
+                <h2 id="current-chat-user">Select a contact to chat</h2>
+            </div>
+            <div class="messages" id="messages-container">
+                <!-- Messages will appear here -->
+            </div>
+            <div class="message-input">
+                <input type="text" id="message-input" placeholder="Type your message..." disabled>
+                <button id="send-button" disabled>Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentRecipient = null;
+        
+        // Set up contact click handlers
+        document.querySelectorAll('.contact').forEach(contact => {
+            contact.addEventListener('click', function() {
+                const userId = this.getAttribute('data-userid');
+                const userName = this.querySelector('.contact-name').textContent;
+                
+                // Update UI
+                document.querySelectorAll('.contact').forEach(c => c.classList.remove('active'));
+                this.classList.add('active');
+                document.getElementById('current-chat-user').textContent = userName;
+                
+                // Enable message input
+                document.getElementById('message-input').disabled = false;
+                document.getElementById('send-button').disabled = false;
+                
+                // Load messages
+                loadMessages(userId);
+                currentRecipient = userId;
+            });
+        });
+        
+        // Load messages for a user
+        function loadMessages(recipientId) {
+            fetch(`/get_messages/${recipientId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const messagesContainer = document.getElementById('messages-container');
+                    messagesContainer.innerHTML = '';
+                    
+                    data.messages.forEach(message => {
+                        const messageElement = createMessageElement(message);
+                        messagesContainer.appendChild(messageElement);
+                    });
+                    
+                    // Scroll to bottom
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                });
+        }
+        
+        // Create a message element
+        function createMessageElement(message) {
+            const isSender = message.sender_id === '{{ user.id }}';
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isSender ? 'sent' : 'received'}`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = message.message;
+            
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'message-time';
+            const date = new Date(message.timestamp);
+            timeDiv.textContent = date.toLocaleTimeString();
+            
+            messageDiv.appendChild(contentDiv);
+            messageDiv.appendChild(timeDiv);
+            
+            return messageDiv;
+        }
+        
+        // Send message
+        document.getElementById('send-button').addEventListener('click', function() {
+            const messageInput = document.getElementById('message-input');
+            const message = messageInput.value.trim();
+            
+            if (message && currentRecipient) {
+                fetch('/send_message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        recipient_id: currentRecipient,
+                        message: message
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        messageInput.value = '';
+                        loadMessages(currentRecipient);
+                    }
+                });
+            }
+        });
+        
+        // Allow sending with Enter key
+        document.getElementById('message-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('send-button').click();
+            }
+        });
+    </script>
+</body>
+</html>
