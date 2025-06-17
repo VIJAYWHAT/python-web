@@ -27,25 +27,35 @@
         <h2>{{ user.name }}</h2>
         <a href="/logout" class="logout-button">Logout</a>
       </div>
+      
       <div class="user-list">
-        <h3>Contacts</h3>
+        <h3>People</h3>
         <ul>
           {% for contact in users %}
-          <li class="contact" data-userid="{{ contact.id }}">
+          <li class="contact" data-userid="{{ contact.id }}" data-type="user">
             <span class="contact-name">{{ contact.name }}</span>
             <span class="contact-email">{{ contact.email }}</span>
           </li>
           {% endfor %}
         </ul>
+        
+        <h3>Forums</h3>
+        <ul>
+          {% for forum in forums %}
+          <li class="contact" data-forumid="{{ forum.id }}" data-type="forum">
+            <span class="contact-name">{{ forum.name }}</span>
+            <span class="contact-email">{{ forum.description }}</span>
+          </li>
+          {% endfor %}
+        </ul>
       </div>
     </div>
+    
     <div class="chat-area">
       <div class="chat-header">
-        <h2 id="current-chat-user">Select a contact to chat</h2>
+        <h2 id="current-chat-user">Select a contact or forum</h2>
       </div>
-      <div class="messages" id="messages-container">
-        <!-- Messages will appear here -->
-      </div>
+      <div class="messages" id="messages-container"></div>
       <div class="message-input">
         <input type="text" id="message-input" placeholder="Type your message..." disabled>
         <button id="send-button" disabled>Send</button>
@@ -55,47 +65,59 @@
 
   <script>
     const currentUserId = "{{ user.id }}";
-    let currentRecipient = null;
+    const currentUserName = "{{ user.name }}";
+    let currentChat = null;
     let currentChatRef = null;
 
-    function startChatWith(recipientId, userName) {
+    function startChatWith(chatId, name, type) {
       // UI updates
-      document.getElementById('current-chat-user').textContent = userName;
+      document.getElementById('current-chat-user').textContent = name;
       document.getElementById('message-input').disabled = false;
       document.getElementById('send-button').disabled = false;
+      
+      // Remove active class from all contacts
       document.querySelectorAll('.contact').forEach(c => c.classList.remove('active'));
-      document.querySelector(`.contact[data-userid="${recipientId}"]`).classList.add('active');
+      
+      // Add active class to selected contact/forum
+      const selector = type === 'user' ? `[data-userid="${chatId}"]` : `[data-forumid="${chatId}"]`;
+      document.querySelector(selector).classList.add('active');
 
-      // Clear previous chat
+      // Clear messages
       const messagesContainer = document.getElementById('messages-container');
       messagesContainer.innerHTML = '';
-
-      // Firebase reference
-      const chatId = [currentUserId, recipientId].sort().join("-");
-      const chatRef = firebase.database().ref('chats/' + chatId);
 
       // Remove previous listener
       if (currentChatRef) {
         currentChatRef.off();
       }
 
-      // Listen to new messages
-      currentChatRef = chatRef;
+      // Set up new chat reference
+      currentChat = { id: chatId, type: type };
+      
+      const path = type === 'user' ? 
+        `chats/${[currentUserId, chatId].sort().join("-")}` : 
+        `forums/${chatId}`;
+      
+      currentChatRef = firebase.database().ref(path);
+      
+      // Listen for new messages
       currentChatRef.on('child_added', snapshot => {
         const message = snapshot.val();
-        const messageElement = createMessageElement(message);
+        const messageElement = createMessageElement(message, type);
         messagesContainer.appendChild(messageElement);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
       });
-
-      currentRecipient = recipientId;
     }
 
-    function createMessageElement(message) {
+    function createMessageElement(message, type) {
       const isSender = message.sender_id === currentUserId;
       const messageDiv = document.createElement('div');
       messageDiv.className = `message ${isSender ? 'sent' : 'received'}`;
 
+      const senderName = document.createElement('div');
+      senderName.className = 'message-sender';
+      senderName.textContent = type === 'forum' ? message.sender_name : '';
+      
       const contentDiv = document.createElement('div');
       contentDiv.className = 'message-content';
       contentDiv.textContent = message.message;
@@ -105,42 +127,56 @@
       const date = new Date(message.timestamp);
       timeDiv.textContent = date.toLocaleTimeString();
 
+      messageDiv.appendChild(senderName);
       messageDiv.appendChild(contentDiv);
       messageDiv.appendChild(timeDiv);
+      
       return messageDiv;
     }
 
-    document.querySelectorAll('.contact').forEach(contact => {
+    // Set up click handlers for people and forums
+    document.querySelectorAll('.contact[data-userid]').forEach(contact => {
       contact.addEventListener('click', function() {
         const userId = this.getAttribute('data-userid');
         const userName = this.querySelector('.contact-name').textContent;
-        startChatWith(userId, userName);
+        startChatWith(userId, userName, 'user');
       });
     });
 
+    document.querySelectorAll('.contact[data-forumid]').forEach(contact => {
+      contact.addEventListener('click', function() {
+        const forumId = this.getAttribute('data-forumid');
+        const forumName = this.querySelector('.contact-name').textContent;
+        startChatWith(forumId, forumName, 'forum');
+      });
+    });
+
+    // Send message handler
     document.getElementById('send-button').addEventListener('click', function() {
       const input = document.getElementById('message-input');
       const message = input.value.trim();
 
-      if (message && currentRecipient) {
-        fetch('/send_message', {
+      if (message && currentChat) {
+        const endpoint = currentChat.type === 'user' ? '/send_message' : '/send_forum_message';
+        const data = currentChat.type === 'user' ? 
+          { recipient_id: currentChat.id, message: message } :
+          { forum_id: currentChat.id, message: message };
+
+        fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            recipient_id: currentRecipient,
-            message: message
-          })
+          body: JSON.stringify(data)
         })
         .then(response => response.json())
         .then(data => {
           if (data.success) {
             input.value = '';
-            // No need to reload manually; Firebase will auto-update
           }
         });
       }
     });
 
+    // Send on Enter key
     document.getElementById('message-input').addEventListener('keypress', function(e) {
       if (e.key === 'Enter') {
         document.getElementById('send-button').click();

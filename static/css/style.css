@@ -248,3 +248,36 @@ body {
     background-color: #bdc3c7;
     cursor: not-allowed;
 }
+
+/* Forum specific styles */
+.user-list h3 {
+    padding: 10px 15px;
+    margin: 0;
+    background-color: #34495e;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.message-sender {
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 4px;
+    color: inherit;
+    opacity: 0.8;
+}
+
+.message.sent .message-sender {
+    display: none; /* Don't show sender name for your own messages */
+}
+
+/* Scrollable sidebar */
+.user-list {
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Active state for forums */
+.contact.active {
+    background-color: #27ae60;
+}
