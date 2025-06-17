@@ -45,15 +45,13 @@ def login():
         password = request.form['password']
         
         try:
-            user = auth_client.sign_in_with_email_and_password(email, password)
-            user_data = db.collection('users').document(user['localId']).get().to_dict()
+            user_data = authenticate_user(email)
             
             session['user'] = {
-                'id': user['localId'],
+                'id': user_data['id'],
                 'email': email,
                 'name': user_data.get('name', email.split('@')[0])
             }
-            session['firebase_token'] = user['idToken']
             
             return redirect(url_for('chat'))
             
@@ -61,6 +59,24 @@ def login():
             return render_template('login.html', error=str(e))
     
     return render_template('login.html')
+
+def authenticate_user(email):
+    users_ref = db.collection('users')
+    users = list(users_ref.stream())  # Convert to list to reuse
+
+    for user in users:
+        user_data = user.to_dict()
+        print(f"User ID: {user.id}")
+        print(f"Checking user: {user_data.get('email', 'No email')}")
+        
+        if user_data.get('email') == email:
+            # Return both the document ID and user data
+            return {
+                'id': user.id,
+                **user_data
+            }
+
+    return None
 
 @app.route('/chat')
 def chat():
@@ -180,7 +196,6 @@ def send_forum_message():
 @app.route('/logout')
 def logout():
     session.pop('user', None)
-    session.pop('firebase_token', None)
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
