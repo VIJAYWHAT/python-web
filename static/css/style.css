@@ -254,7 +254,7 @@ body {
     padding: 10px 15px;
     margin: 0;
     background-color: #34495e;
-    position: sticky;
+    position: static;
     top: 0;
     z-index: 1;
 }
