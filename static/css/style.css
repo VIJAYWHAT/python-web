@@ -279,3 +279,8 @@ body {
 .contact.active {
     background-color: #27ae60;
 }
+
+.company-name {
+    font-size: 32px;
+    margin-top: 2px;
+}
