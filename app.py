@@ -82,23 +82,41 @@ def authenticate_user(email):
 def chat():
     if 'user' not in session:
         return redirect(url_for('login'))
-    
-    # Get all users except current user
-    users_ref = db.collection('users')
+
+    current_user_doc = db.collection('users').document(session['user']['id']).get()
+    current_user_data = current_user_doc.to_dict()
+
+    user_learning_languages = current_user_data.get('learn_languages', [])
+    user_id = session['user']['id']
+
     users = []
-    for doc in users_ref.stream():
+    users_ref = db.collection('users').stream()
+
+    for doc in users_ref:
+        if doc.id == user_id:
+            continue  # skip current user
+
         user_data = doc.to_dict()
-        if doc.id != session['user']['id']:
+        tutor_languages = user_data.get('tutor', [])
+
+        # Find common languages
+        common_langs = list(set(user_learning_languages) & set(tutor_languages))
+
+        if common_langs:
+            # Build description like "English Tutor" or "English and Hindi Tutor"
+            if len(common_langs) == 1:
+                description = f"{common_langs[0].capitalize()} Tutor"
+            else:
+                capitalized = [lang.capitalize() for lang in common_langs]
+                description = f"{' and '.join(capitalized)} Tutor"
+
             users.append({
                 'id': doc.id,
                 'name': user_data.get('name', doc.id),
-                'email': user_data.get('email', '')
+                'description': description
             })
-    
+
     # Get forums the user is part of
-    current_user = db.collection('users').document(session['user']['id']).get().to_dict()
-    user_learning_languages = current_user.get('learn_languages', [])
-    
     forums = []
     for lang in user_learning_languages:
         forum_doc = db.collection('forums').document(lang).get()
@@ -110,12 +128,13 @@ def chat():
                     'name': forum_data.get('name', lang),
                     'description': forum_data.get('description', '')
                 })
-    
+
     return render_template('chat.html',
-                         user=session['user'],
-                         users=users,
-                         forums=forums,
-                         firebase_config=firebase_config)
+                           user=session['user'],
+                           users=users,
+                           forums=forums,
+                           firebase_config=firebase_config)
+
 
 @app.route('/get_messages/<recipient_id>')
 def get_messages(recipient_id):

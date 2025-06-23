@@ -33,7 +33,7 @@
           {% for contact in users %}
           <li class="contact" data-userid="{{ contact.id }}" data-type="user">
             <span class="contact-name">{{ contact.name }}</span>
-            <span class="contact-email">{{ contact.email }}</span>
+            <span class="contact-email">{{ contact.description }}</span>
           </li>
           {% endfor %}
         </ul>
