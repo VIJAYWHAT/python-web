@@ -88,6 +88,7 @@ def chat():
     current_user_data = current_user_doc.to_dict()
 
     user_learning_languages = set(current_user_data.get('learn_languages', []))
+    tutor_languages = set(current_user_data.get('tutor', []))
     user_tutor_languages = set(current_user_data.get('tutor', []))
 
     users = []
@@ -132,7 +133,8 @@ def chat():
 
     # Forums user is part of
     forums = []
-    for lang in user_learning_languages:
+    forum_lang = tutor_languages.union(user_learning_languages)
+    for lang in forum_lang:
         forum_doc = db.collection('forums').document(lang).get()
         if forum_doc.exists:
             forum_data = forum_doc.to_dict()
